@@ -1,0 +1,60 @@
+name: star-candles
+description: Render the repository's GitHub star history as candlestick charts committed to a data branch
+branding:
+  icon: trending-up
+  color: green
+
+inputs:
+  token:
+    description: Token used for GitHub API calls
+    default: ${{ github.token }}
+  chart-branch:
+    description: Branch holding the generated charts and sample history
+    default: chart
+  max-candles:
+    description: Number of most recent candles rendered per view
+    default: "90"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v7
+      with:
+        go-version-file: ${{ github.action_path }}/go.mod
+        cache: false
+    - shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        CHART_BRANCH: ${{ inputs.chart-branch }}
+        MAX_CANDLES: ${{ inputs.max-candles }}
+      run: |
+        if [ "$CHART_BRANCH" = "$GITHUB_REF_NAME" ]; then
+          echo "chart-branch must differ from the branch running the workflow" >&2
+          exit 1
+        fi
+        go build -C "$GITHUB_ACTION_PATH" -o "$RUNNER_TEMP/star-candles" ./cmd/star-candles
+        auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\n')"
+        dir="$RUNNER_TEMP/chart-branch"
+        rm -rf "$dir"
+        git worktree prune
+        if git -c http.extraheader="$auth" ls-remote --exit-code origin "refs/heads/$CHART_BRANCH" >/dev/null; then
+          git -c http.extraheader="$auth" fetch --depth=1 origin "$CHART_BRANCH"
+          git worktree add --detach "$dir" FETCH_HEAD
+        else
+          status=$?
+          if [ "$status" -ne 2 ]; then
+            echo "cannot reach origin to look up $CHART_BRANCH" >&2
+            exit "$status"
+          fi
+          git worktree add --detach "$dir"
+          git -C "$dir" checkout --orphan "$CHART_BRANCH"
+          git -C "$dir" rm -rfq .
+        fi
+        REPO="$GITHUB_REPOSITORY" HISTORY_FILE="$dir/history.json" OUTPUT_DIR="$dir" "$RUNNER_TEMP/star-candles"
+        git -C "$dir" config user.name "github-actions[bot]"
+        git -C "$dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git -C "$dir" add -A
+        if ! git -C "$dir" diff --cached --quiet; then
+          git -C "$dir" commit -m "chore(chart): update star chart"
+          git -C "$dir" -c http.extraheader="$auth" push origin "HEAD:refs/heads/$CHART_BRANCH"
+        fi
