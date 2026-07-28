@@ -28,11 +28,24 @@ runs:
         CHART_BRANCH: ${{ inputs.chart-branch }}
         MAX_CANDLES: ${{ inputs.max-candles }}
       run: |
+        if [ "$CHART_BRANCH" = "$GITHUB_REF_NAME" ]; then
+          echo "chart-branch must differ from the branch running the workflow" >&2
+          exit 1
+        fi
         go build -C "$GITHUB_ACTION_PATH" -o "$RUNNER_TEMP/star-candles" ./cmd/star-candles
+        auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\n')"
         dir="$RUNNER_TEMP/chart-branch"
-        if git fetch --depth=1 origin "$CHART_BRANCH"; then
+        rm -rf "$dir"
+        git worktree prune
+        if git -c http.extraheader="$auth" ls-remote --exit-code origin "refs/heads/$CHART_BRANCH" >/dev/null; then
+          git -c http.extraheader="$auth" fetch --depth=1 origin "$CHART_BRANCH"
           git worktree add --detach "$dir" FETCH_HEAD
         else
+          status=$?
+          if [ "$status" -ne 2 ]; then
+            echo "cannot reach origin to look up $CHART_BRANCH" >&2
+            exit "$status"
+          fi
           git worktree add --detach "$dir"
           git -C "$dir" checkout --orphan "$CHART_BRANCH"
           git -C "$dir" rm -rfq .
@@ -43,5 +56,5 @@ runs:
         git -C "$dir" add -A
         if ! git -C "$dir" diff --cached --quiet; then
           git -C "$dir" commit -m "chore(chart): update star chart"
-          git -C "$dir" push origin "HEAD:refs/heads/$CHART_BRANCH"
+          git -C "$dir" -c http.extraheader="$auth" push origin "HEAD:refs/heads/$CHART_BRANCH"
         fi

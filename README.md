@@ -61,7 +61,7 @@ Then embed the charts in your README, replacing `OWNER/REPO`:
 </picture>
 ```
 
-The same URLs exist for `chart-monthly-*.svg` and `chart-yearly-*.svg`; wrap each in a `<details>` block to get the switcher shown above. The first run creates the `chart` branch on its own, backfills the star history, and pushes the six SVGs; run the workflow once by hand from the Actions tab if you do not want to wait for the cron. Inputs `chart-branch` (default `chart`) and `max-candles` (default `90`) are available on the action.
+The same URLs exist for `chart-monthly-*.svg` and `chart-yearly-*.svg`; wrap each in a `<details>` block to get the switcher shown above. The first run creates the `chart` branch on its own, backfills the star history, and pushes the six SVGs; run the workflow once by hand from the Actions tab if you do not want to wait for the cron. Inputs available on the action: `chart-branch` (default `chart`), `max-candles` (default `90`), and `token` (defaults to the workflow token; used for both API calls and the chart branch push, so `persist-credentials: false` on the checkout is fine, and passing a PAT makes chart pushes able to trigger other workflows).
 
 ## How it works
 
