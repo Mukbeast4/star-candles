@@ -19,16 +19,15 @@ func main() {
 	cfg := config.Load()
 	client := github.NewClient(cfg.GitHubAPI, cfg.Token)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
 	hist, err := history.Load(cfg.HistoryPath)
 	if err != nil {
 		log.Fatalf("Failed to load history: %v", err)
 	}
 
 	if len(hist.Samples) == 0 {
-		events, err := client.StarEvents(ctx, cfg.Repo)
+		backfillCtx, backfillCancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		events, err := client.StarEvents(backfillCtx, cfg.Repo)
+		backfillCancel()
 		if err != nil {
 			log.Printf("WARN: backfill unavailable, starting from current count: %v", err)
 		} else {
@@ -36,6 +35,9 @@ func main() {
 			log.Printf("Backfilled %d daily samples from %d star events", len(hist.Samples), len(events))
 		}
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 
 	count, err := client.StarCount(ctx, cfg.Repo)
 	if err != nil {

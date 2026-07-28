@@ -18,7 +18,7 @@ func TestStarCount(t *testing.T) {
 		if got := r.Header.Get("Authorization"); got != "Bearer tok" {
 			t.Errorf("Authorization = %q, want Bearer tok", got)
 		}
-		fmt.Fprint(w, `{"stargazers_count": 1284}`)
+		_, _ = fmt.Fprint(w, `{"stargazers_count": 1284}`)
 	}))
 	defer srv.Close()
 
@@ -37,7 +37,7 @@ func TestStarCountNoTokenOmitsAuthorization(t *testing.T) {
 		if got := r.Header.Get("Authorization"); got != "" {
 			t.Errorf("Authorization = %q, want empty", got)
 		}
-		fmt.Fprint(w, `{"stargazers_count": 3}`)
+		_, _ = fmt.Fprint(w, `{"stargazers_count": 3}`)
 	}))
 	defer srv.Close()
 
@@ -50,7 +50,7 @@ func TestStarCountNoTokenOmitsAuthorization(t *testing.T) {
 func TestStarCountAPIError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, `{"message": "Not Found"}`)
+		_, _ = fmt.Fprint(w, `{"message": "Not Found"}`)
 	}))
 	defer srv.Close()
 
@@ -78,12 +78,12 @@ func TestStarEventsPaginatesAndSorts(t *testing.T) {
 		}
 		switch r.URL.Query().Get("page") {
 		case "1":
-			fmt.Fprintf(w, "[%s]", strings.Join(page1, ","))
+			_, _ = fmt.Fprintf(w, "[%s]", strings.Join(page1, ","))
 		case "2":
-			fmt.Fprint(w, page2)
+			_, _ = fmt.Fprint(w, page2)
 		default:
 			t.Errorf("unexpected page %q", r.URL.Query().Get("page"))
-			fmt.Fprint(w, "[]")
+			_, _ = fmt.Fprint(w, "[]")
 		}
 	}))
 	defer srv.Close()
@@ -110,7 +110,7 @@ func TestStarEventsSinglePage(t *testing.T) {
 	calls := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		fmt.Fprint(w, `[{"starred_at": "2026-07-01T10:00:00Z"}]`)
+		_, _ = fmt.Fprint(w, `[{"starred_at": "2026-07-01T10:00:00Z"}]`)
 	}))
 	defer srv.Close()
 
