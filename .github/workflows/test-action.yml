@@ -1,19 +1,19 @@
-name: chart
+name: test-action
 
 on:
-  schedule:
-    - cron: "23 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: chart
+  group: test-action
 
 jobs:
-  chart:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: ./
+        with:
+          chart-branch: chart-test
