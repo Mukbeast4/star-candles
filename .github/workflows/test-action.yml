@@ -1,6 +1,9 @@
 name: test-action
 
 on:
+  push:
+    branches:
+      - feature/reusable-action
   workflow_dispatch:
 
 permissions:
